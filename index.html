@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mirage Móveis — Monthly Recommendation System</title>
+  <style>
+    :root {
+      --primary: #1a237e;
+      --accent: #ff9800;
+      --hot: #d32f2f;
+      --warm: #f57c00;
+      --cold: #1976d2;
+      --success: #2e7d32;
+      --bg: #f5f7fb;
+      --card: #fff;
+      --shadow: 0 4px 12px rgba(0,0,0,0.1);
+      --shadow-hover: 0 8px 20px rgba(0,0,0,0.15);
+      --radius: 12px;
+      --border: 1px solid #e0e6ed;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: var(--bg);
+      color: #333;
+      margin: 0;
+      padding: 0;
+      line-height: 1.6;
+    }
+    #header {
+      background: var(--card);
+      padding: 1.5rem 2rem;
+      box-shadow: var(--shadow);
+      border-bottom: 3px solid var(--primary);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    h1 {
+      margin: 0 0 0.5rem;
+      color: var(--primary);
+      font-size: 1.8rem;
+      font-weight: 600;
+    }
+    .header-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    .data-source, .month {
+      background: var(--primary);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius);
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    .header-actions {
+      display: flex;
+      gap: 1rem;
+    }
+    button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+      box-shadow: 0 2px 4px rgba(26,35,126,0.2);
+    }
+    button:hover {
+      background: #0d1444;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(26,35,126,0.3);
+    }
+    #nav {
+      display: flex;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      overflow-x: auto;
+      border-bottom: var(--border);
+    }
+    .nav-tab {
+      flex: 1;
+      padding: 1rem 2rem;
+      text-align: center;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+      border-bottom: 3px solid transparent;
+      white-space: nowrap;
+    }
+    .nav-tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    .nav-tab:hover {
+      background: #f8f9fa;
+    }
+    .tab-pane {
+      display: none;
+      padding: 2rem;
+      animation: fadeIn 0.3s;
+    }
+    .tab-pane.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .kpi-card {
+      background: var(--card);
+      padding: 1.5rem;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      text-align: center;
+      transition: transform 0.2s;
+    }
+    .kpi-card:hover {
+      transform: translateY(-5px);
+    }
+    .kpi-card.hot { border-top: 5px solid var(--hot); }
+    .kpi-card.warm { border-top: 5px solid var(--warm); }
+    .kpi-card.cold { border-top: 5px solid var(--cold); }
+    .kpi-card.top-arch { border-top: 5px solid var(--success); }
+    .kpi-icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .kpi-number {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin: 0;
+    }
+    .kpi-label {
+      color: #666;
+      font-size: 0.9rem;
+      margin: 0;
+    }
+    #pipeline-chart {
+      height: 300px;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 2rem;
+    }
+    .top-leads-table {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 1rem;
+      text-align: left;
+      border-bottom: 1px solid #e0e6ed;
+    }
+    th {
+      background: var(--primary);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    th:hover {
+      background: #0d1444;
+    }
+    th.asc::after { content: ' ▲'; }
+    th.desc::after { content: ' ▼'; }
+    tr:hover {
+      background: #f8f9fa;
+    }
+    tr.hot { background: rgba(211,47,47,0.05); }
+    tr.hot:hover { background: rgba(211,47,47,0.1); }
+    tr.warm { background: rgba(245,124,0,0.05); }
+    tr.warm:hover { background: rgba(245,124,0,0.1); }
+    tr.cold { background: rgba(25,118,210,0.05); }
+    tr.cold:hover { background: rgba(25,118,210,0.1); }
+    .badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: white;
+    }
+    .badge.hot { background: var(--hot); }
+    .badge.warm { background: var(--warm); }
+    .badge.cold { background: var(--cold); }
+    .momentum {
+      font-size: 1.1rem;
+    }
+    .controls {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    select, input {
+      padding: 0.75rem;
+      border: var(--border);
+      border-radius: var(--radius);
+      font-size: 1rem;
+    }
+    .architects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 1.5rem;
+    }
+    .arch-card {
+      background: var(--card);
+      padding: 1.5rem;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      transition: all 0.2s;
+    }
+    .arch-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-hover);
+    }
+    .arch-name {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin: 0 0 0.5rem;
+    }
+    .arch-firm {
+      color: #666;
+      margin: 0 0 1rem;
+    }
+    .arch-score {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--success);
+      margin: 0 0 1rem;
+    }
+    .progress {
+      background: #e0e6ed;
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 1rem;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--success), #4caf50);
+      transition: width 0.3s;
+    }
+    .badge-small {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      margin-right: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .specifier-yes { background: var(--success); color: white; }
+    .specifier-no { background: #ffcdd2; color: #c62828; }
+    .rel-strong { background: var(--success); color: white; }
+    .rel-medium { background: var(--accent); color: white; }
+    .rel-weak { background: #ffecb3; color: #f57f17; }
+    .rel-none { background: #e0e0e0; color: #666; }
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+    }
+    .tag {
+      background: #e3f2fd;
+      color: var(--cold);
+      padding: 0.25rem 0.5rem;
+      border-radius: 12px;
+      font-size: 0.8rem;
+    }
+    #tracker-chart {
+      height: 400px;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 2rem;
+    }
+    .tracker-table {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    #modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      background: var(--card);
+      padding: 2rem;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-hover);
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .modal-tabs {
+      display: flex;
+      margin-bottom: 1.5rem;
+    }
+    .modal-tab {
+      flex: 1;
+      padding: 1rem;
+      text-align: center;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+    }
+    .modal-tab.active {
+      border-bottom-color: var(--primary);
+      color: var(--primary);
+    }
+    .drop-zone {
+      border: 3px dashed var(--primary);
+      border-radius: var(--radius);
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 1rem;
+    }
+    .drop-zone.dragover {
+      background: #e3f2fd;
+      border-color: var(--accent);
+    }
+    .drop-zone p {
+      margin: 0;
+      color: #666;
+    }
+    textarea {
+      width: 100%;
+      height: 200px;
+      resize: vertical;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: flex-end;
+    }
+    button.secondary {
+      background: #e0e6ed;
+      color: #333;
+    }
+    #toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: var(--card);
+      padding: 1rem 1.5rem;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-hover);
+      display: none;
+      z-index: 1000;
+      min-width: 300px;
+      border-left: 5px solid var(--success);
+    }
+    .toast.error { border-left-color: var(--hot); }
+    .toast.warning { border-left-color: var(--accent); }
+    @media (max-width: 768px) {
+      #header { padding: 1rem; }
+      h1 { font-size: 1.5rem; }
+      .kpi-grid { grid-template-columns: 1fr; }
+      .header-info, .header-actions, .controls { flex-direction: column; align-items: stretch; }
+      .architects-grid { grid-template-columns: 1fr; }
+      table { font-size: 0.85rem; }
+      th, td { padding: 0.5rem; }
+      #nav { flex-wrap: nowrap; }
+      .nav-tab { font-size: 0.9rem; padding: 1rem 0.5rem; }
+      .tab-pane { padding: 1rem; }
+    }
+    @media print {
+      body { background: white; font-size: 10pt; }
+      #header button, #nav, #modal, #toast, .controls, button { display: none !important; }
+      .tab-pane { display: block !important; margin-top: 2rem; page-break-after: avoid; }
+      .tab-pane:not(:first-child)::before { content: '--- ' attr(data-title) ' ---'; display: block; text-align: center; font-size: 14pt; font-weight: bold; margin: 2rem 0; }
+      table { width: 100%; page-break-inside: auto; }
+      thead { display: table-header-group; }
+      tbody tr { page-break-inside: avoid; page-break-after: auto; }
+      canvas { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      *, *::before, *::after { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      .kpi-grid { display: block; }
+      .kpi-card { display: inline-block; width: 45%; margin-bottom: 1rem; vertical-align: top; }
+    }
+  </style>
+</head>
+<body>
+  <div id="header">
+    <h1>🛋️ Mirage Móveis — Monthly Recommendation System</h1>
+    <div class="header-info">
+      <div id="data-source" class="data-source">Sample Data</div>
+      <div id="month" class="month">May 2026 Report</div>
+    </div>
+    <div class="header-actions">
+      <button onclick="showImportModal()">📥 Import Data</button>
+      <button onclick="window.print()">📄 Export PDF</button>
+    </div>
+  </div>
+  <nav id="nav">
+    <div class="nav-tab active" onclick="switchTab('dashboard')">📊 Dashboard</div>
+    <div class="nav-tab" onclick="switchTab('leads')">📋 All Leads</div>
+    <div class="nav-tab" onclick="switchTab('architects')">🏗️ Architects</div>
+    <div class="nav-tab" onclick="switchTab('tracker')">📈 Tracker</div>
+  </nav>
+  <main>
+    <div id="dashboard" class="tab-pane active">
+      <div class="kpi-grid">
+        <div id="kpi-hot" class="kpi-card hot">
+          <div class="kpi-icon">🔥</div>
+          <div class="kpi-number">0</div>
+          <div class="kpi-label">Hot Leads</div>
+        </div>
+        <div id="kpi-warm" class="kpi-card warm">
+          <div class="kpi-icon">🟡</div>
+          <div class="kpi-number">0</div>
+          <div class="kpi-label">Warm Leads</div>
+        </div>
+        <div id="kpi-cold" class="kpi-card cold">
+          <div class="kpi-icon">❄️</div>
+          <div class="kpi-number">0</div>
+          <div class="kpi-label">Cold Leads</div>
+        </div>
+        <div id="kpi-top-arch" class="kpi-card top-arch">
+          <div class="kpi-icon">🤝</div>
+          <div class="kpi-number">—</div>
+          <div class="kpi-label">Top Architect</div>
+        </div>
+      </div>
+      <canvas id="pipeline-chart"></canvas>
+      <div class="top-leads-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Company</th>
+              <th>Industry</th>
+              <th>Score</th>
+              <th>Classification</th>
+              <th>Momentum</th>
+              <th>Architect Bridge</th>
+              <th>Suggested Action</th>
+            </tr>
+          </thead>
+          <tbody id="top-leads-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="leads" class="tab-pane">
+      <div class="controls">
+        <input id="search-leads" placeholder="Search companies..." onkeyup="filterLeads()">
+        <select id="filter-leads" onchange="filterLeads()">
+          <option value="all">All</option>
+          <option value="hot">Hot</option>
+          <option value="warm">Warm</option>
+          <option value="cold">Cold</option>
+        </select>
+      </div>
+      <div class="top-leads-table">
+        <table id="leads-table">
+          <thead>
+            <tr>
+              <th onclick="sortLeads('rank')">Rank</th>
+              <th onclick="sortLeads('company')">Company</th>
+              <th onclick="sortLeads('industry')">Industry</th>
+              <th onclick="sortLeads('location')">Location</th>
+              <th onclick="sortLeads('fit')">Fit</th>
+              <th onclick="sortLeads('urgency')">Urgency</th>
+              <th onclick="sortLeads('value')">Value</th>
+              <th onclick="sortLeads('relationship')">Relationship</th>
+              <th onclick="sortLeads('architectChannel')">Architect</th>
+              <th onclick="sortLeads('totalScore')">Total Score</th>
+              <th onclick="sortLeads('classification')">Classification</th>
+              <th onclick="sortLeads('momentum')">Momentum</th>
+              <th onclick="sortLeads('architectBridge')">Architect Bridge</th>
+              <th onclick="sortLeads('suggestedAction')">Suggested Action</th>
+              <th onclick="sortLeads('status')">Status</th>
+            </tr>
+          </thead>
+          <tbody id="leads-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="architects" class="tab-pane">
+      <div id="architects-grid" class="architects-grid"></div>
+    </div>
+    <div id="tracker" class="tab-pane">
+      <canvas id="tracker-chart"></canvas>
+      <div class="tracker-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th>Total Leads</th>
+              <th>Hot</th>
+              <th>Warm</th>
+              <th>Cold</th>
+              <th>Approaches</th>
+              <th>Meetings</th>
+              <th>Proposals</th>
+              <th>Closed</th>
+              <th>Revenue (R$)</th>
+            </tr>
+          </thead>
+          <tbody id="tracker-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+  <div id="modal">
+    <div class="modal-content">
+      <h2>Import Data (JSON)</h2>
+      <div class="modal-tabs">
+        <div class="modal-tab active" onclick="switchModalTab('upload')">Upload JSON</div>
+        <div class="modal-tab" onclick="switchModalTab('paste')">Paste JSON</div>
+      </div>
+      <div id="upload-tab">
+        <div id="drop-zone" class="drop-zone" onclick="document.getElementById('file-input').click()">
+          <p>Drag & drop JSON file here or click to browse</p>
+          <input id="file-input" type="file" accept=".json" style="display:none;">
+        </div>
+      </div>
+      <div id="paste-tab" style="display:none;">
+        <textarea id="json-paste" placeholder='Paste your JSON here... { "leads": [...], "architects": [...], "tracker": [...], "reportDate": "..." }'></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="secondary" onclick="closeImportModal()">Cancel</button>
+        <button onclick="importData()">Import</button>
+      </div>
+    </div>
+  </div>
+  <div id="toast"></div>
+  <script>
+    'use strict';
+
+    class Lead {
+      constructor(data) {
+        this.id = data.id;
+        this.company = data.company;
+        this.industry = data.industry;
+        this.location = data.location;
+        this.employeeCount = data.employeeCount;
+        this.budget = data.budget;
+        this.hasRecentTrigger = data.hasRecentTrigger;
+        this.projectTimeline = data.projectTimeline;
+        this.pastClient = data.pastClient;
+        this.referralSource = data.referralSource;
+        this.engagement = data.engagement;
+        this.partnerArchitectIds = data.partnerArchitectIds || [];
+        this.previousScore = data.previousScore || 0;
+        this.fit = 0;
+        this.urgency = 0;
+        this.value = 0;
+        this.relationship = 0;
+        this.architectChannel = 0;
+        this.totalScore = 0;
+        this.classification = 'Cold';
+        this.momentum = '🆕 New';
+        this.architectBridge = '—';
+        this.suggestedAction = '';
+        this.status = 'Open';
+      }
+    }
+
+    class Architect {
+      constructor(data) {
+        this.id = data.id;
+        this.name = data.name;
+        this.firm = data.firm;
+        this.corpProjectsPct = data.corpProjectsPct;
+        this.furnitureSpecifier = data.furnitureSpecifier;
+        this.projectsPerYear = data.projectsPerYear;
+        this.relationship = data.relationship;
+        this.clientCompanies = data.clientCompanies || [];
+        this.score = 0;
+      }
+    }
+
+    // Scoring helpers
+    function getIndustryScore(industry) {
+      const scores = {
+        tech: 95, finance: 90, legal: 85, healthcare: 80, consulting: 75,
+        retail: 70, oil_gas: 70, real_estate: 65, manufacturing: 60,
+        education: 50, other: 40
+      };
+      return scores[industry] || 40;
+    }
+
+    function getLocationScore(location) {
+      const lower = location.toLowerCase();
+      if (lower.includes('rio de janeiro') || lower === 'rio') return 100;
+      if (lower.includes('niterói')) return 85;
+      if (lower.includes('rj') || lower.includes('baixada')) return 75;
+      return 40;
+    }
+
+    function getSizeScore(employeeCount) {
+      if (employeeCount < 10) return 5;
+      if (employeeCount < 50) return 30;
+      if (employeeCount < 250) return 55;
+      if (employeeCount < 1000) return 80;
+      if (employeeCount < 5000) return 95;
+      return 75;
+    }
+
+    function getBudgetScore(budget) {
+      const scores = {
+        '<1M': 15, '1M-5M': 40, '5M-15M': 70,
+        '15M-50M': 90, '50M+': 95
+      };
+      return scores[budget] || 0;
+    }
+
+    function getSizeProxy(employeeCount) {
+      if (employeeCount < 50) return 20;
+      if (employeeCount < 250) return 45;
+      if (employeeCount < 1000) return 70;
+      if (employeeCount < 5000) return 90;
+      return 85;
+    }
+
+    function runPipeline(leads, architects) {
+      const architectIds = new Set(architects.map(a => a.id));
+
+      for (let lead of leads) {
+        // Fit
+        lead.fit = (
+          getIndustryScore(lead.industry) +
+          getLocationScore(lead.location) +
+          getSizeScore(lead.employeeCount) +
+          getBudgetScore(lead.budget)
+        ) / 4;
+
+        // Urgency
+        const triggerScore = lead.hasRecentTrigger ? 90 : 10;
+        const timelineScores = {
+          immediate: 100, '3months': 70, '6months': 45,
+          'year_plus': 20, unknown: 25
+        };
+        const timelineScore = timelineScores[lead.projectTimeline] || 25;
+        lead.urgency = triggerScore * 0.5 + timelineScore * 0.5;
+        if (!lead.hasRecentTrigger) lead.urgency = Math.max(15, lead.urgency);
+
+        // Value
+        const sizeProxy = getSizeProxy(lead.employeeCount);
+        const recurrence = lead.pastClient ? 85 : 30;
+        lead.value = sizeProxy * 0.5 + recurrence * 0.3 + 50 * 0.2;
+
+        // Relationship
+        const pastScore = lead.pastClient ? 95 : 5;
+        const refScores = {
+          architect: 95, partner: 85, referral: 75, direct: 65,
+          event: 45, cold: 10, other: 25
+        };
+        const refScore = refScores[lead.referralSource] || 25;
+        const engScores = { high: 95, medium: 60, low: 30, none: 5 };
+        const engScore = engScores[lead.engagement] || 5;
+        lead.relationship = pastScore * 0.4 + refScore * 0.3 + engScore * 0.3;
+        if (!lead.pastClient) lead.relationship = Math.max(10, lead.relationship);
+
+        // Architect Channel
+        const matchCount = lead.partnerArchitectIds.filter(id => architectIds.has(id)).length;
+        lead.architectChannel = matchCount === 0 ? 5 : matchCount === 1 ? 65 : matchCount === 2 ? 85 : 100;
+
+        // Total Score
+        lead.totalScore = (
+          lead.fit * 0.30 +
+          lead.urgency * 0.20 +
+          lead.value * 0.25 +
+          lead.relationship * 0.15 +
+          lead.architectChannel * 0.10
+        );
+
+        // Classification
+        lead.classification = lead.totalScore >= 80 ? 'Hot' : lead.totalScore >= 50 ? 'Warm' : 'Cold';
+
+        // Momentum
+        const delta = lead.totalScore - lead.previousScore;
+        if (lead.previousScore === 0) {
+          lead.momentum = '🆕 New';
+        } else if (delta >= 20) {
+          lead.momentum = '🚀 Surge';
+        } else if (delta >= 10) {
+          lead.momentum = '⬆️ Rising';
+        } else if (delta <= -20) {
+          lead.momentum = '📉 Drop';
+        } else if (delta <= -10) {
+          lead.momentum = '⬇️ Declining';
+        } else {
+          lead.momentum = '➡️ Stable';
+        }
+
+        // Architect Bridge
+        const bridgeArch = architects.find(a => a.clientCompanies.includes(lead.company));
+        lead.architectBridge = bridgeArch ? bridgeArch.name : '—';
+
+        // Suggested Action
+        if (lead.classification === 'Hot') {
+          lead.suggestedAction = '🚀 Immediate Outreach';
+        } else if (lead.classification === 'Warm') {
+          lead.suggestedAction = '📞 Schedule Call';
+        } else {
+          lead.suggestedAction = '👀 Monitor';
+        }
+      }
+
+      // Sort leads
+      leads.sort((a, b) => b.totalScore - a.totalScore);
+      leads.forEach((lead, i) => lead.rank = i + 1);
+
+      // Score architects
+      for (let arch of architects) {
+        const portfolio = Math.min(100, arch.corpProjectsPct * (arch.furnitureSpecifier ? 1.5 : 1));
+        const volume = Math.min(100, arch.projectsPerYear * 7);
+        const relScores = { strong: 95, medium: 60, weak: 25, none: 5 };
+        const relScore = relScores[arch.relationship] || 5;
+        const cross = Math.min(100, arch.clientCompanies.length * 10);
+        arch.score = portfolio * 0.30 + volume * 0.25 + relScore * 0.25 + cross * 0.20;
+      }
+      architects.sort((a, b) => b.score - a.score);
+
+      return { rankedLeads: leads, rankedArchitects: architects };
+    }
+
+    // Globals
+    let currentData = { leads: [], architects: [], tracker: [], reportDate: '' };
+    let filteredLeads = [];
+    let sortKey = 'rank';
+    let sortAsc = false;
+
+    // Sample Data
+    const sampleRaw = {
+      leads: [
+        {id:'L1', company:'Itaú Unibanco', industry:'finance', location:'rio de janeiro', employeeCount:100000, budget:'50M+', hasRecentTrigger:true, projectTimeline:'immediate', pastClient:false, referralSource:'architect', engagement:'high', partnerArchitectIds:[1], previousScore:70},
+        {id:'L2', company:'Petrobras', industry:'oil_gas', location:'rio de janeiro', employeeCount:60000, budget:'50M+', hasRecentTrigger:true, projectTimeline:'3months', pastClient:true, referralSource:'partner', engagement:'medium', partnerArchitectIds:[2], previousScore:85},
+        {id:'L3', company:'Bradesco', industry:'finance', location:'rj', employeeCount:45000, budget:'50M+', hasRecentTrigger:false, projectTimeline:'6months', pastClient:false, referralSource:'direct', engagement:'medium', partnerArchitectIds:[], previousScore:55},
+        {id:'L4', company:'Vale', industry:'oil_gas', location:'niterói', employeeCount:80000, budget:'50M+', hasRecentTrigger:true, projectTimeline:'immediate', pastClient:false, referralSource:'referral', engagement:'high', partnerArchitectIds:[1], previousScore:0},
+        {id:'L5', company:'Fleury', industry:'healthcare', location:'rio de janeiro', employeeCount:25000, budget:'15M-50M', hasRecentTrigger:true, projectTimeline:'3months', pastClient:false, referralSource:'partner', engagement:'high', partnerArchitectIds:[3], previousScore:65},
+        {id:'L6', company:'Cielo', industry:'finance', location:'rio', employeeCount:12000, budget:'15M-50M', hasRecentTrigger:false, projectTimeline:'3months', pastClient:false, referralSource:'event', engagement:'medium', partnerArchitectIds:[], previousScore:45},
+        {id:'L7', company:'Magazine Luiza', industry:'retail', location:'rj', employeeCount:30000, budget:'50M+', hasRecentTrigger:true, projectTimeline:'6months', pastClient:false, referralSource:'architect', engagement:'low', partnerArchitectIds:[4], previousScore:60},
+        {id:'L8', company:'Localiza', industry:'other', location:'rio de janeiro', employeeCount:20000, budget:'15M-50M', hasRecentTrigger:false, projectTimeline:'unknown', pastClient:true, referralSource:'direct', engagement:'low', partnerArchitectIds:[], previousScore:75},
+        {id:'L9', company:'Embraer', industry:'manufacturing', location:'baixada', employeeCount:18000, budget:'50M+', hasRecentTrigger:false, projectTimeline:'year_plus', pastClient:false, referralSource:'cold', engagement:'none', partnerArchitectIds:[5], previousScore:30},
+        {id:'L10', company:'Suzano', industry:'manufacturing', location:'niterói', employeeCount:35000, budget:'50M+', hasRecentTrigger:true, projectTimeline:'immediate', pastClient:false, referralSource:'referral', engagement:'medium', partnerArchitectIds:[], previousScore:0},
+        {id:'L11', company:'Totvs', industry:'tech', location:'rio de janeiro', employeeCount:10000, budget:'15M-50M', hasRecentTrigger:false, projectTimeline:'6months', pastClient:false, referralSource:'partner', engagement:'high', partnerArchitectIds:[7], previousScore:68},
+        {id:'L12', company:'Stone', industry:'finance', location:'rj', employeeCount:5000, budget:'5M-15M', hasRecentTrigger:false, projectTimeline:'3months', pastClient:false, referralSource:'cold', engagement:'low', partnerArchitectIds:[8], previousScore:40},
+        {id:'L13', company:'USP', industry:'education', location:'são paulo', employeeCount:120000, budget:'5M-15M', hasRecentTrigger:false, projectTimeline:'unknown', pastClient:false, referralSource:'other', engagement:'none', partnerArchitectIds:[], previousScore:0},
+        {id:'L14', company:'Natura', industry:'retail', location:'rio de janeiro', employeeCount:35000, budget:'50M+', hasRecentTrigger:false, projectTimeline:'year_plus', pastClient:false, referralSource:'cold', engagement:'none', partnerArchitectIds:[], previousScore:25},
+        {id:'L15', company:'Ambev', industry:'manufacturing', location:'são paulo', employeeCount:50000, budget:'50M+', hasRecentTrigger:false, projectTimeline:'unknown', pastClient:false, referralSource:'cold', engagement:'low', partnerArchitectIds:[], previousScore:35}
+      ],
+      architects: [
+        {id:1, name:'Ana Costa', firm:'Costa Design', corpProjectsPct:90, furnitureSpecifier:true, projectsPerYear:15, relationship:'strong', clientCompanies:['Itaú Unibanco', 'Vale']},
+        {id:2, name:'Pedro Santos', firm:'Santos Arquitetura Corporativa', corpProjectsPct:85, furnitureSpecifier:true, projectsPerYear:12, relationship:'medium', clientCompanies:['Petrobras', 'Bradesco']},
+        {id:3, name:'Maria Oliveira', firm:'Oliveira Projetos', corpProjectsPct:70, furnitureSpecifier:false, projectsPerYear:8, relationship:'strong', clientCompanies:['Fleury', 'Cielo']},
+        {id:4, name:'Carlos Lima', firm:'Lima Corporate', corpProjectsPct:95, furnitureSpecifier:true, projectsPerYear:20, relationship:'strong', clientCompanies:['Magazine Luiza', 'Localiza']},
+        {id:5, name:'Fernanda Rocha', firm:'Rocha Interiores', corpProjectsPct:60, furnitureSpecifier:true, projectsPerYear:10, relationship:'weak', clientCompanies:['Embraer']},
+        {id:6, name:'Rafael Mendes', firm:'Mendes Arquitetos', corpProjectsPct:75, furnitureSpecifier:false, projectsPerYear:6, relationship:'medium', clientCompanies:['Suzano']},
+        {id:7, name:'Juliana Ferreira', firm:'Ferreira Design Corp', corpProjectsPct:80, furnitureSpecifier:true, projectsPerYear:14, relationship:'strong', clientCompanies:['Totvs']},
+        {id:8, name:'Lucas Almeida', firm:'Almeida Projetos', corpProjectsPct:50, furnitureSpecifier:false, projectsPerYear:5, relationship:'none', clientCompanies:['Stone']}
+      ],
+      tracker: [
+        {month:'Jan 2026', totalLeads:10, hot:0, warm:7, cold:3, approaches:2, meetings:1, proposals:0, closed:0, revenue:0},
+        {month:'Feb 2026', totalLeads:12, hot:1, warm:8, cold:3, approaches:4, meetings:2, proposals:1, closed:0, revenue:0},
+        {month:'Mar 2026', totalLeads:13, hot:1, warm:9, cold:3, approaches:5, meetings:3, proposals:1, closed:1, revenue:150000},
+        {month:'Apr 2026', totalLeads:14, hot:2, warm:9, cold:3, approaches:6, meetings:4, proposals:2, closed:1, revenue:250000},
+        {month:'May 2026', totalLeads:15, hot:2, warm:10, cold:3, approaches:7, meetings:4, proposals:2, closed:1, revenue:350000}
+      ],
+      reportDate: 'May 2026'
+    };
+
+    function loadSample() {
+      const leads = sampleRaw.leads.map(d => new Lead(d));
+      const architects = sampleRaw.architects.map(d => new Architect(d));
+      const result = runPipeline(leads, architects);
+      currentData = {
+        leads: result.rankedLeads,
+        architects: result.rankedArchitects,
+        tracker: sampleRaw.tracker,
+        reportDate: sampleRaw.reportDate
+      };
+      filteredLeads = [...currentData.leads];
+      updateHeader();
+      renderAll();
+    }
+
+    function updateHeader() {
+      document.getElementById('data-source').textContent = 'Sample Data';
+      document.getElementById('month').textContent = `${currentData.reportDate} Report`;
+    }
+
+    function renderAll() {
+      renderKPIs();
+      renderPipelineChart();
+      renderTopLeads();
+      renderLeadsTable();
+      renderArchitects();
+      renderTracker();
+    }
+
+    function renderKPIs() {
+      const hot = currentData.leads.filter(l => l.classification === 'Hot').length;
+      const warm = currentData.leads.filter(l => l.classification === 'Warm').length;
+      const cold = currentData.leads.filter(l => l.classification === 'Cold').length;
+      const topArch = currentData.architects[0];
+
+      document.getElementById('kpi-hot').querySelector('.kpi-number').textContent = hot;
+      document.getElementById('kpi-warm').querySelector('.kpi-number').textContent = warm;
+      document.getElementById('kpi-cold').querySelector('.kpi-number').textContent = cold;
+      const topEl = document.getElementById('kpi-top-arch').querySelector('.kpi-number');
+      topEl.textContent = topArch ? `${topArch.name} (${Math.round(topArch.score)})` : '—';
+    }
+
+    function renderPipelineChart() {
+      const canvas = document.getElementById('pipeline-chart');
+      const ctx = canvas.getContext('2d');
+      canvas.width = canvas.offsetWidth;
+      canvas.height = 300;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const hot = currentData.leads.filter(l => l.classification === 'Hot').length;
+      const warm = currentData.leads.filter(l => l.classification === 'Warm').length;
+      const cold = currentData.leads.filter(l => l.classification === 'Cold').length;
+      const total = hot + warm + cold;
+
+      if (total === 0) return;
+
+      const chartWidth = canvas.width * 0.8;
+      const chartHeight = 200;
+      const x = (canvas.width - chartWidth) / 2;
+      const y = 80;
+
+      const coldH = (cold / total) * chartHeight;
+      const warmH = (warm / total) * chartHeight;
+      const hotH = (hot / total) * chartHeight;
+
+      // Bars (stacked horizontal from bottom)
+      ctx.fillStyle = 'rgba(25,118,210,0.8)';
+      ctx.fillRect(x, y + chartHeight - coldH, chartWidth, coldH);
+      ctx.fillStyle = 'rgba(245,124,0,0.8)';
+      ctx.fillRect(x, y + chartHeight - coldH - warmH, chartWidth, warmH);
+      ctx.fillStyle = 'rgba(211,47,47,0.8)';
+      ctx.fillRect(x, y + chartHeight - coldH - warmH - hotH, chartWidth, hotH);
+
+      // Labels
+      ctx.fillStyle = '#333';
+      ctx.font = 'bold 16px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Pipeline Distribution', canvas.width / 2, 30);
+
+      ctx.textAlign = 'center';
+      ctx.font = '14px sans-serif';
+      ctx.fillText(`${Math.round((cold/total)*100)}% Cold`, x + chartWidth/2, y + chartHeight - coldH/2);
+      ctx.fillText(`${Math.round((warm/total)*100)}% Warm`, x + chartWidth/2, y + chartHeight - coldH - warmH/2);
+      ctx.fillText(`${Math.round((hot/total)*100)}% Hot`, x + chartWidth/2, y + chartHeight - coldH - warmH - hotH/2);
+
+      // Legend
+      const legendY = y + chartHeight + 30;
+      ctx.textAlign = 'left';
+      ctx.fillStyle = 'rgba(211,47,47,0.8)';
+      ctx.fillRect( x, legendY, 20, 20 );
+      ctx.fillStyle = '#333'; ctx.fillText('Hot', x + 25, legendY + 15);
+      ctx.fillStyle = 'rgba(245,124,0,0.8)';
+      ctx.fillRect( x + 80, legendY, 20, 20 );
+      ctx.fillStyle = '#333'; ctx.fillText('Warm', x + 105, legendY + 15);
+      ctx.fillStyle = 'rgba(25,118,210,0.8)';
+      ctx.fillRect( x + 160, legendY, 20, 20 );
+      ctx.fillStyle = '#333'; ctx.fillText('Cold', x + 185, legendY + 15);
+    }
+
+    function renderTopLeads() {
+      const tbody = document.getElementById('top-leads-tbody');
+      const top5 = currentData.leads.slice(0, 5);
+      tbody.innerHTML = top5.map(lead => `
+        <tr class="${lead.classification.toLowerCase()}">
+          <td>${lead.rank}</td>
+          <td><strong>${lead.company}</strong></td>
+          <td>${lead.industry}</td>
+          <td><strong>${Math.round(lead.totalScore)}</strong></td>
+          <td><span class="badge ${lead.classification.toLowerCase()}">${lead.classification}</span></td>
+          <td><span class="momentum">${lead.momentum}</span></td>
+          <td>${lead.architectBridge}</td>
+          <td>${lead.suggestedAction}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderLeadsTable() {
+      renderLeads();
+    }
+
+    function renderLeads() {
+      const tbody = document.getElementById('leads-tbody');
+      tbody.innerHTML = filteredLeads.map(lead => `
+        <tr class="${lead.classification.toLowerCase()}">
+          <td>${lead.rank}</td>
+          <td>${lead.company}</td>
+          <td>${lead.industry}</td>
+          <td>${lead.location}</td>
+          <td>${Math.round(lead.fit)}</td>
+          <td>${Math.round(lead.urgency)}</td>
+          <td>${Math.round(lead.value)}</td>
+          <td>${Math.round(lead.relationship)}</td>
+          <td>${Math.round(lead.architectChannel)}</td>
+          <td><strong>${Math.round(lead.totalScore)}</strong></td>
+          <td><span class="badge ${lead.classification.toLowerCase()}">${lead.classification}</span></td>
+          <td><span class="momentum">${lead.momentum}</span></td>
+          <td>${lead.architectBridge}</td>
+          <td>${lead.suggestedAction}</td>
+          <td><span class="badge-small">${lead.status}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    function renderArchitects() {
+      const grid = document.getElementById('architects-grid');
+      grid.innerHTML = currentData.architects.map(arch => `
+        <div class="arch-card">
+          <h3 class="arch-name">${arch.name}</h3>
+          <p class="arch-firm">${arch.firm}</p>
+          <div class="arch-score">${Math.round(arch.score)}</div>
+          <div class="progress">
+            <div class="progress-bar" style="width: ${arch.corpProjectsPct}%"></div>
+          </div>
+          <span class="badge-small specifier-${arch.furnitureSpecifier ? 'yes' : 'no'}">${arch.furnitureSpecifier ? '✅ Furniture Specifier' : '❌'}</span>
+          <span class="badge-small rel-${arch.relationship}">${arch.relationship}</span>
+          <div>Projects/Year: ${arch.projectsPerYear}</div>
+          <div class="tags">
+            ${arch.clientCompanies.map(c => `<span class="tag">${c}</span>`).join('')}
+          </div>
+          <button onclick="viewBridgeLeads('${arch.name}')">View Bridge Leads</button>
+        </div>
+      `).join('');
+    }
+
+    function renderTracker() {
+      const tbody = document.getElementById('tracker-tbody');
+      tbody.innerHTML = currentData.tracker.map(row => `
+        <tr>
+          <td><strong>${row.month}</strong></td>
+          <td>${row.totalLeads}</td>
+          <td style="color:var(--hot);font-weight:600;">${row.hot}</td>
+          <td style="color:var(--warm);font-weight:600;">${row.warm}</td>
+          <td style="color:var(--cold);font-weight:600;">${row.cold}</td>
+          <td>${row.approaches}</td>
+          <td>${row.meetings}</td>
+          <td>${row.proposals}</td>
+          <td>${row.closed}</td>
+          <td style="color:var(--success);font-weight:600;">R$ ${row.revenue.toLocaleString()}</td>
+        </tr>
+      `).join('');
+
+      renderTrackerChart();
+    }
+
+    function renderTrackerChart() {
+      const canvas = document.getElementById('tracker-chart');
+      const ctx = canvas.getContext('2d');
+      canvas.width = canvas.offsetWidth;
+      canvas.height = 400;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const data = currentData.tracker;
+      if (data.length === 0) return;
+
+      const months = data.map(d => d.month);
+      const maxHot = Math.max(...data.map(d => d.hot));
+      const maxWarm = Math.max(...data.map(d => d.warm));
+      const maxCold = Math.max(...data.map(d => d.cold));
+      const maxVal = Math.max(maxHot, maxWarm, maxCold, 10);
+
+      const chartWidth = canvas.width * 0.9;
+      const chartHeight = 250;
+      const barWidth = chartWidth / data.length * 0.8;
+      const groupSpacing = chartWidth / data.length * 0.2;
+      const xStart = (canvas.width - chartWidth) / 2;
+      const y = canvas.height - 100;
+
+      ctx.strokeStyle = '#ddd';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(xStart, y + chartHeight);
+      ctx.lineTo(xStart + chartWidth, y + chartHeight);
+      ctx.lineTo(xStart + chartWidth, y + chartHeight - maxVal * 2);
+      ctx.stroke();
+
+      // Bars
+      data.forEach((row, i) => {
+        const groupX = xStart + i * (barWidth + groupSpacing) + groupSpacing / 2;
+        const barSpacing = barWidth / 4;
+        const coldBarW = barSpacing;
+        const warmBarW = barSpacing;
+        const hotBarW = barSpacing;
+
+        // Cold
+        ctx.fillStyle = 'rgba(25,118,210,0.7)';
+        ctx.fillRect(groupX, y + chartHeight - row.cold * 2, coldBarW, row.cold * 2);
+        // Warm
+        ctx.fillStyle = 'rgba(245,124,0,0.7)';
+        ctx.fillRect(groupX + barSpacing, y + chartHeight - row.warm * 2, warmBarW, row.warm * 2);
+        // Hot
+        ctx.fillStyle = 'rgba(211,47,47,0.7)';
+        ctx.fillRect(groupX + barSpacing * 2, y + chartHeight - row.hot * 2, hotBarW, row.hot * 2);
+
+        ctx.fillStyle = '#333';
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(row.month.slice(0,3), groupX + barWidth/2, y + chartHeight + 20);
+      });
+
+      // Title
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.fillText('Monthly Tracker', canvas.width / 2, 40);
+
+      // Legend
+      const legendY = 60;
+      ctx.textAlign = 'left';
+      ctx.fillStyle = 'rgba(211,47,47,0.7)';
+      ctx.fillRect(20, legendY, 20, 20);
+      ctx.fillStyle = '#333'; ctx.fillText('Hot', 45, legendY + 15);
+      ctx.fillStyle = 'rgba(245,124,0,0.7)';
+      ctx.fillRect(120, legendY, 20, 20);
+      ctx.fillStyle = '#333'; ctx.fillText('Warm', 145, legendY + 15);
+      ctx.fillStyle = 'rgba(25,118,210,0.7)';
+      ctx.fillRect(220, legendY, 20, 20);
+      ctx.fillStyle = '#333'; ctx.fillText('Cold', 245, legendY + 15);
+    }
+
+    // Tab functions
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+      document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+      document.getElementById(tabName).classList.add('active');
+      event.currentTarget.classList.add('active');
+      if (tabName === 'dashboard') renderPipelineChart();
+      else if (tabName === 'leads') filterLeads();
+      else if (tabName === 'architects') renderArchitects();
+      else if (tabName === 'tracker') renderTracker();
+    }
+
+    // Leads table
+    function sortLeads(key) {
+      if (sortKey === key) {
+        sortAsc = !sortAsc;
+      } else {
+        sortKey = key;
+        sortAsc = false;
+      }
+
+      filteredLeads.sort((a, b) => {
+        let valA = a[key];
+        let valB = b[key];
+        if (typeof valA === 'number') {
+          return sortAsc ? valA - valB : valB - valA;
+        } else {
+          return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        }
+      });
+
+      document.querySelectorAll('#leads-table th').forEach(th => {
+        th.classList.remove('asc', 'desc');
+      });
+      event.currentTarget.classList.add(sortAsc ? 'asc' : 'desc');
+
+      renderLeads();
+    }
+
+    function filterLeads() {
+      const search = document.getElementById('search-leads').value.toLowerCase();
+      const filter = document.getElementById('filter-leads').value;
+
+      filteredLeads = currentData.leads.filter(lead => {
+        const matchesSearch = lead.company.toLowerCase().includes(search) || lead.id.toLowerCase().includes(search);
+        const matchesFilter = filter === 'all' || lead.classification.toLowerCase() === filter;
+        return matchesSearch && matchesFilter;
+      });
+
+      renderLeads();
+    }
+
+    function viewBridgeLeads(archName) {
+      const bridges = currentData.leads.filter(l => l.architectBridge === archName).map(l => l.company);
+      const msg = bridges.length ? bridges.join(', ') : 'No current bridge leads';
+      showToast(`Bridge Leads for ${archName}: ${msg}`, 'info');
+    }
+
+    // Modal
+    function showImportModal() {
+      document.getElementById('modal').style.display = 'flex';
+    }
+
+    function closeImportModal() {
+      document.getElementById('modal').style.display = 'none';
+      document.getElementById('upload-tab').style.display = 'block';
+      document.getElementById('paste-tab').style.display = 'none';
+      document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+      document.querySelector('.modal-tab').classList.add('active');
+    }
+
+    function switchModalTab(tab) {
+      document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+      document.getElementById('upload-tab').style.display = tab === 'upload' ? 'block' : 'none';
+      document.getElementById('paste-tab').style.display = tab === 'paste' ? 'block' : 'none';
+    }
+
+    // Import
+    function importData() {
+      try {
+        let jsonStr;
+        const fileInput = document.getElementById('file-input');
+        if (fileInput.files[0]) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            jsonStr = e.target.result;
+            processImport(jsonStr);
+          };
+          reader.readAsText(fileInput.files[0]);
+          return;
+        }
+        jsonStr = document.getElementById('json-paste').value;
+        if (!jsonStr) throw new Error('No JSON provided');
+        processImport(jsonStr);
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+      }
+    }
+
+    function processImport(jsonStr) {
+      const data = JSON.parse(jsonStr);
+      if (!data.leads || !data.architects || !data.tracker || !data.reportDate) {
+        throw new Error('Invalid format. Expected {leads, architects, tracker, reportDate}');
+      }
+      const leads = data.leads.map(d => new Lead(d));
+      const architects = data.architects.map(d => new Architect(d));
+      const result = runPipeline(leads, architects);
+      currentData = {
+        leads: result.rankedLeads,
+        architects: result.rankedArchitects,
+        tracker: data.tracker,
+        reportDate: data.reportDate
+      };
+      filteredLeads = [...currentData.leads];
+      document.getElementById('data-source').textContent = `Imported Data (${data.leads.length} leads)`;
+      document.getElementById('month').textContent = `${data.reportDate} Report`;
+      renderAll();
+      closeImportModal();
+      showToast('Data imported successfully!', 'success');
+    }
+
+    // Toast
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast ${type === 'success' ? 'success' : type === 'error' ? 'error' : 'warning'}`;
+      toast.style.display = 'block';
+      setTimeout(() => {
+        toast.style.display = 'none';
+      }, 3500);
+    }
+
+    // Event listeners
+    document.getElementById('drop-zone').addEventListener('dragover', (e) => {
+      e.preventDefault();
+      document.getElementById('drop-zone').classList.add('dragover');
+    });
+    document.getElementById('drop-zone').addEventListener('dragleave', () => {
+      document.getElementById('drop-zone').classList.remove('dragover');
+    });
+    document.getElementById('drop-zone').addEventListener('drop', (e) => {
+      e.preventDefault();
+      document.getElementById('drop-zone').classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file) {
+        document.getElementById('file-input').files = e.dataTransfer.files;
+      }
+    });
+    document.getElementById('file-input').addEventListener('change', () => {
+      if (document.getElementById('file-input').files[0]) {
+        importData();
+      }
+    });
+
+    // Print prep
+    window.addEventListener('beforeprint', () => {
+      document.querySelectorAll('.tab-pane').forEach((pane, i) => {
+        pane.setAttribute('data-title', pane.id.replace('dashboard', 'Dashboard').replace('leads', 'All Leads').replace('architects', 'Architects').replace('tracker', 'Tracker'));
+      });
+    });
+
+    // Init
+    window.addEventListener('load', () => {
+      loadSample();
+    });
+
+    // Resize charts
+    window.addEventListener('resize', () => {
+      renderPipelineChart();
+      renderTrackerChart();
+    });
+  </script>
+</body>
+</html>
