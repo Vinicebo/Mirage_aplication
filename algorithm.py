@@ -22,7 +22,7 @@ class APIConfig:
     - RSS: Free public feeds
     - IBGE: Free public API
     """
-    news_api_key: str = "YOUR_NEWSAPI_KEY_HERE"  # Replace with your key
+    news_api_key: str = "183cc74a2ad444b7939cf2723b731a91"  # Replace with your key
     brasil_api_enabled: bool = True
     rss_enabled: bool = True
     economic_enabled: bool = True
