@@ -542,6 +542,45 @@
       .rec-grid { grid-template-columns: 1fr; }
     }
 
+    .analytics-table { margin-bottom: 2rem; }
+    .analytics-table tbody tr { cursor: pointer; }
+    .analytics-table tbody tr:hover { background: var(--bg-warm); }
+    .roi-positive { color: var(--success); font-weight: 600; }
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .team-card {
+      background: var(--surface);
+      border: 1px solid var(--border-solid);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.125rem;
+      box-shadow: var(--shadow);
+    }
+    .team-card strong { display: block; margin-bottom: 0.35rem; }
+    .team-card span { font-size: 0.8125rem; color: var(--text-muted); }
+    .assign-select {
+      padding: 0.35rem 0.5rem;
+      font-size: 0.8125rem;
+      min-width: 130px;
+    }
+    .arch-metrics-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+      margin: 0.75rem 0 1rem;
+      font-size: 0.75rem;
+    }
+    .arch-metrics-row div {
+      background: var(--surface-mute);
+      padding: 0.45rem 0.5rem;
+      border-radius: var(--radius-sm);
+      text-align: center;
+    }
+    .arch-metrics-row strong { display: block; font-size: 0.9375rem; color: var(--text); }
+
     .kpi-icon {
       font-size: 1.25rem;
       margin: 0 0 0.5rem;
@@ -974,7 +1013,8 @@
     <div class="nav-tab" data-tab="dashboard" onclick="switchTab('dashboard')">📊 Dashboard</div>
     <div class="nav-tab" data-tab="leads" onclick="switchTab('leads')">📋 All Leads</div>
     <div class="nav-tab" data-tab="pipeline" onclick="switchTab('pipeline')">🔄 Sales Pipeline</div>
-    <div class="nav-tab" data-tab="architects" onclick="switchTab('architects')">🏗️ Architects</div>
+    <div class="nav-tab" data-tab="channels" onclick="switchTab('channels')">📡 Channel Performance</div>
+    <div class="nav-tab" data-tab="architects" onclick="switchTab('architects')">🏗️ Architect Partners</div>
     <div class="nav-tab" data-tab="tracker" onclick="switchTab('tracker')">📈 Tracker</div>
   </nav>
   <main>
@@ -1058,6 +1098,16 @@
       </div>
       <div class="controls">
         <input id="search-leads" placeholder="Search companies..." onkeyup="filterLeads()">
+        <select id="filter-source" onchange="filterLeads()">
+          <option value="all">All channels</option>
+          <option value="architect">Architect referral</option>
+          <option value="partner">Partner</option>
+          <option value="referral">Client referral</option>
+          <option value="direct">Direct</option>
+          <option value="event">Event</option>
+          <option value="cold">Cold</option>
+          <option value="other">Other</option>
+        </select>
         <select id="filter-leads" onchange="filterLeads()">
           <option value="all">All</option>
           <option value="hot">Hot</option>
@@ -1071,6 +1121,8 @@
             <tr>
               <th onclick="sortLeads('rank')">Rank</th>
               <th onclick="sortLeads('company')">Company</th>
+              <th onclick="sortLeads('referralSource')">Channel</th>
+              <th onclick="sortLeads('assignedTo')">Assigned to</th>
               <th onclick="sortLeads('industry')">Industry</th>
               <th onclick="sortLeads('location')">Location</th>
               <th onclick="sortLeads('fit')">Fit</th>
@@ -1096,14 +1148,62 @@
         <h2>Structured sales pipeline</h2>
         <button type="button" class="text-link" onclick="switchTab('tracker')">View monthly tracker →</button>
       </div>
-      <p style="margin:0 0 1.25rem;color:var(--text-muted);font-size:0.875rem;">Move leads through Mirage's follow-up workflow. Click a card for details or to advance the stage.</p>
+      <p style="margin:0 0 1.25rem;color:var(--text-muted);font-size:0.875rem;">Ranked leads are assigned to salespeople, tracked by source, and moved through each stage. Click a card for details or to advance.</p>
+      
+      <h3 style="font-size:0.9375rem;margin:1.5rem 0 0.75rem;font-weight:600;">Sales team assignments</h3>
+      <div id="sales-team-grid" class="team-grid"></div>
+
       <div id="pipeline-board" class="pipeline-board"></div>
     </div>
+
+    <div id="channels" class="tab-pane">
+      <div class="rec-intro">
+        <h2>Channel performance</h2>
+        <p>See which lead sources create the strongest opportunities — ranked leads, conversion, and revenue by channel. Click a row to filter leads.</p>
+      </div>
+      <div class="analytics-table top-leads-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Channel</th>
+              <th>Leads</th>
+              <th>Hot</th>
+              <th>In pipeline</th>
+              <th>Closed</th>
+              <th>Conv. rate</th>
+              <th>Revenue (R$)</th>
+            </tr>
+          </thead>
+          <tbody id="channels-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
     <div id="architects" class="tab-pane">
       <div class="section-header">
-        <h2>Contracted architect network</h2>
+        <h2>Architect partnership optimization</h2>
         <button type="button" class="text-link" onclick="switchTab('pipeline')">View sales pipeline →</button>
       </div>
+
+      <p style="margin:0 0 1rem;color:var(--text-muted);font-size:0.875rem;">Track referrals, conversion, revenue, and partner cost — identify architects who deliver the most valuable opportunities.</p>
+      <div class="analytics-table top-leads-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Architect</th>
+              <th>Referrals</th>
+              <th>Meetings+</th>
+              <th>Closed</th>
+              <th>Conv.</th>
+              <th>Revenue (R$)</th>
+              <th>Partner cost</th>
+              <th>ROI</th>
+            </tr>
+          </thead>
+          <tbody id="architect-partnership-tbody"></tbody>
+        </table>
+      </div>
+
       <div id="architects-grid" class="architects-grid"></div>
     </div>
     <div id="tracker" class="tab-pane">
@@ -1200,7 +1300,87 @@
       return PIPELINE_STAGES.find(s => s.id === stageId)?.label || stageId;
     }
 
-    let leadFilters = { architectBridge: '' };
+    let leadFilters = { architectBridge: '', source: 'all' };
+    const SALES_REPS = ['Carla Mendes', 'Ricardo Lima', 'Fernanda Souza'];
+    const SOURCE_LABELS = {
+      architect: 'Architect referral',
+      partner: 'Partner / specifier',
+      referral: 'Client referral',
+      direct: 'Direct outbound',
+      event: 'Event / trade show',
+      cold: 'Cold prospecting',
+      other: 'Other'
+    };
+
+    function formatSource(key) {
+      return SOURCE_LABELS[key] || key;
+    }
+
+    function isInPipeline(stage) {
+      return ['approach', 'meeting', 'proposal', 'closed'].includes(stage);
+    }
+
+    function isClosed(stage) {
+      return stage === 'closed';
+    }
+
+    function getChannelStats() {
+      const map = {};
+      for (const lead of currentData.leads) {
+        const key = lead.referralSource || 'other';
+        if (!map[key]) {
+          map[key] = { key, label: formatSource(key), leads: 0, hot: 0, pipeline: 0, closed: 0, revenue: 0 };
+        }
+        const b = map[key];
+        b.leads++;
+        if (lead.classification === 'Hot') b.hot++;
+        if (isInPipeline(lead.pipelineStage)) b.pipeline++;
+        if (isClosed(lead.pipelineStage)) {
+          b.closed++;
+          b.revenue += lead.dealRevenue || 0;
+        }
+      }
+      return Object.values(map).sort((a, b) => b.revenue - a.revenue || b.hot - a.hot);
+    }
+
+    function getArchitectPartnershipStats() {
+      return currentData.architects.map(arch => {
+        const linked = currentData.leads.filter(l =>
+          (l.partnerArchitectIds || []).includes(arch.id) ||
+          l.architectBridge === arch.name
+        );
+        const referrals = linked.length;
+        const meetings = linked.filter(l => ['meeting', 'proposal', 'closed'].includes(l.pipelineStage)).length;
+        const closed = linked.filter(l => isClosed(l.pipelineStage)).length;
+        const revenue = linked.filter(l => isClosed(l.pipelineStage)).reduce((s, l) => s + (l.dealRevenue || 0), 0);
+        const cost = arch.partnerCost || 0;
+        const conv = referrals ? Math.round((closed / referrals) * 100) : 0;
+        const roi = cost > 0 ? (revenue / cost).toFixed(1) + 'x' : '—';
+        return { arch, referrals, meetings, closed, revenue, cost, conv, roi };
+      }).sort((a, b) => b.revenue - a.revenue);
+    }
+
+    function assignLeadTo(leadId, rep) {
+      const lead = findLead(leadId);
+      if (!lead) return;
+      lead.assignedTo = rep || 'Unassigned';
+      renderLeads();
+      renderTopLeads();
+      renderPipelineBoard();
+      renderSalesTeam();
+      renderRecommendations();
+      if (activeLeadId === leadId) openLeadDetail(leadId);
+      showToast(lead.company + ' assigned to ' + lead.assignedTo, 'success');
+    }
+
+    function filterBySource(sourceKey) {
+      switchTab('leads');
+      leadFilters.source = sourceKey;
+      document.getElementById('filter-source').value = sourceKey;
+      filterLeads();
+    }
+
+
     let activeLeadId = null;
 
 
@@ -1231,6 +1411,8 @@
         this.suggestedAction = '';
         this.status = data.status || 'Open';
         this.pipelineStage = data.pipelineStage || mapStatusToStage(this.status);
+        this.assignedTo = data.assignedTo || 'Unassigned';
+        this.dealRevenue = data.dealRevenue || 0;
       }
     }
 
@@ -1245,6 +1427,7 @@
         this.relationship = data.relationship;
         this.clientCompanies = data.clientCompanies || [];
         this.score = 0;
+        this.partnerCost = data.partnerCost || 0;
       }
     }
 
@@ -1403,12 +1586,12 @@
     // Sample Data
     const sampleRaw = {
       leads: [
-        {id:'L1', status:'Meeting', pipelineStage:'meeting', company:'BTG Pactual', industry:'finance', location:'rio de janeiro', employeeCount:4500, budget:'50M+', hasRecentTrigger:true, projectTimeline:'immediate', pastClient:false, referralSource:'architect', engagement:'high', partnerArchitectIds:[1,2], previousScore:72},
-        {id:'L2', status:'Approach', pipelineStage:'approach', company:"Rede D'Or", industry:'healthcare', location:'rio de janeiro', employeeCount:90000, budget:'50M+', hasRecentTrigger:true, projectTimeline:'immediate', pastClient:true, referralSource:'partner', engagement:'high', partnerArchitectIds:[3], previousScore:68},
-        {id:'L3', status:'Proposal', pipelineStage:'proposal', company:'Nubank', industry:'tech', location:'rio', employeeCount:7000, budget:'50M+', hasRecentTrigger:true, projectTimeline:'3months', pastClient:true, referralSource:'architect', engagement:'high', partnerArchitectIds:[1,4], previousScore:78},
-        {id:'L4', status:'Approach', pipelineStage:'approach', company:'Equinor Brasil', industry:'oil_gas', location:'rio de janeiro', employeeCount:1200, budget:'50M+', hasRecentTrigger:true, projectTimeline:'immediate', pastClient:true, referralSource:'referral', engagement:'high', partnerArchitectIds:[2,5], previousScore:0},
-        {id:'L5', company:'Cyrela', industry:'construction_re', location:'rj', employeeCount:8000, budget:'50M+', hasRecentTrigger:true, projectTimeline:'3months', pastClient:false, referralSource:'architect', engagement:'high', partnerArchitectIds:[5], previousScore:58},
-        {id:'L6', company:'Movida', industry:'other', location:'rio de janeiro', employeeCount:15000, budget:'15M-50M', hasRecentTrigger:false, projectTimeline:'6months', pastClient:true, referralSource:'direct', engagement:'medium', partnerArchitectIds:[], previousScore:62},
+        {id:'L1', assignedTo:'Carla Mendes', status:'Meeting', pipelineStage:'meeting', company:'BTG Pactual', industry:'finance', location:'rio de janeiro', employeeCount:4500, budget:'50M+', hasRecentTrigger:true, projectTimeline:'immediate', pastClient:false, referralSource:'architect', engagement:'high', partnerArchitectIds:[1,2], previousScore:72},
+        {id:'L2', assignedTo:'Ricardo Lima', status:'Approach', pipelineStage:'approach', company:"Rede D'Or", industry:'healthcare', location:'rio de janeiro', employeeCount:90000, budget:'50M+', hasRecentTrigger:true, projectTimeline:'immediate', pastClient:true, referralSource:'partner', engagement:'high', partnerArchitectIds:[3], previousScore:68},
+        {id:'L3', assignedTo:'Carla Mendes', status:'Proposal', pipelineStage:'proposal', company:'Nubank', industry:'tech', location:'rio', employeeCount:7000, budget:'50M+', hasRecentTrigger:true, projectTimeline:'3months', pastClient:true, referralSource:'architect', engagement:'high', partnerArchitectIds:[1,4], previousScore:78},
+        {id:'L4', assignedTo:'Fernanda Souza', status:'Approach', pipelineStage:'approach', company:'Equinor Brasil', industry:'oil_gas', location:'rio de janeiro', employeeCount:1200, budget:'50M+', hasRecentTrigger:true, projectTimeline:'immediate', pastClient:true, referralSource:'referral', engagement:'high', partnerArchitectIds:[2,5], previousScore:0},
+        {id:'L5', assignedTo:'Ricardo Lima', company:'Cyrela', industry:'construction_re', location:'rj', employeeCount:8000, budget:'50M+', hasRecentTrigger:true, projectTimeline:'3months', pastClient:false, referralSource:'architect', engagement:'high', partnerArchitectIds:[5], previousScore:58},
+        {id:'L6', assignedTo:'Carla Mendes', status:'Closed', pipelineStage:'closed', dealRevenue:185000, company:'Movida', industry:'other', location:'rio de janeiro', employeeCount:15000, budget:'15M-50M', hasRecentTrigger:false, projectTimeline:'6months', pastClient:true, referralSource:'direct', engagement:'medium', partnerArchitectIds:[], previousScore:62},
         {id:'L7', company:'Raia Drogasil', industry:'retail', location:'rj', employeeCount:85000, budget:'50M+', hasRecentTrigger:false, projectTimeline:'6months', pastClient:false, referralSource:'partner', engagement:'medium', partnerArchitectIds:[6], previousScore:54},
         {id:'L8', company:'Light S.A.', industry:'other', location:'rio', employeeCount:4000, budget:'15M-50M', hasRecentTrigger:false, projectTimeline:'3months', pastClient:false, referralSource:'direct', engagement:'low', partnerArchitectIds:[], previousScore:48},
         {id:'L9', company:'Totvs', industry:'tech', location:'rio de janeiro', employeeCount:12000, budget:'15M-50M', hasRecentTrigger:false, projectTimeline:'6months', pastClient:false, referralSource:'partner', engagement:'high', partnerArchitectIds:[4], previousScore:65},
@@ -1420,14 +1603,14 @@
         {id:'L15', company:'O Boticário', industry:'retail', location:'curitiba', employeeCount:14000, budget:'5M-15M', hasRecentTrigger:false, projectTimeline:'year_plus', pastClient:false, referralSource:'cold', engagement:'low', partnerArchitectIds:[], previousScore:28}
       ],
       architects: [
-        {id:1, name:'Ana Costa', firm:'Costa Design', corpProjectsPct:90, furnitureSpecifier:true, projectsPerYear:15, relationship:'strong', clientCompanies:['BTG Pactual', 'Nubank']},
-        {id:2, name:'Pedro Santos', firm:'Santos Arquitetura Corporativa', corpProjectsPct:85, furnitureSpecifier:true, projectsPerYear:12, relationship:'medium', clientCompanies:['BTG Pactual', 'Equinor Brasil']},
-        {id:3, name:'Maria Oliveira', firm:'Oliveira Projetos', corpProjectsPct:70, furnitureSpecifier:false, projectsPerYear:8, relationship:'strong', clientCompanies:["Rede D'Or", 'Raia Drogasil']},
-        {id:4, name:'Carlos Lima', firm:'Lima Corporate', corpProjectsPct:95, furnitureSpecifier:true, projectsPerYear:20, relationship:'strong', clientCompanies:['Nubank', 'Totvs']},
-        {id:5, name:'Fernanda Rocha', firm:'Rocha Interiores', corpProjectsPct:60, furnitureSpecifier:true, projectsPerYear:10, relationship:'weak', clientCompanies:['Equinor Brasil', 'Cyrela']},
-        {id:6, name:'Rafael Mendes', firm:'Mendes Arquitetos', corpProjectsPct:75, furnitureSpecifier:false, projectsPerYear:6, relationship:'medium', clientCompanies:['Raia Drogasil']},
-        {id:7, name:'Juliana Ferreira', firm:'Ferreira Design Corp', corpProjectsPct:80, furnitureSpecifier:true, projectsPerYear:14, relationship:'strong', clientCompanies:['Stone', 'Totvs']},
-        {id:8, name:'Lucas Almeida', firm:'Almeida Projetos', corpProjectsPct:50, furnitureSpecifier:false, projectsPerYear:5, relationship:'none', clientCompanies:['Light S.A.']}
+        {id:1, name:'Ana Costa', firm:'Costa Design', corpProjectsPct:90, furnitureSpecifier:true, projectsPerYear:15, relationship:'strong', partnerCost:22000, clientCompanies:['BTG Pactual', 'Nubank']},
+        {id:2, name:'Pedro Santos', firm:'Santos Arquitetura Corporativa', corpProjectsPct:85, furnitureSpecifier:true, projectsPerYear:12, relationship:'medium', partnerCost:18000, clientCompanies:['BTG Pactual', 'Equinor Brasil']},
+        {id:3, name:'Maria Oliveira', firm:'Oliveira Projetos', corpProjectsPct:70, furnitureSpecifier:false, projectsPerYear:8, relationship:'strong', partnerCost:12000, clientCompanies:["Rede D'Or", 'Raia Drogasil']},
+        {id:4, name:'Carlos Lima', firm:'Lima Corporate', corpProjectsPct:95, furnitureSpecifier:true, projectsPerYear:20, relationship:'strong', partnerCost:25000, clientCompanies:['Nubank', 'Totvs']},
+        {id:5, name:'Fernanda Rocha', firm:'Rocha Interiores', corpProjectsPct:60, furnitureSpecifier:true, projectsPerYear:10, relationship:'weak', partnerCost:9000, clientCompanies:['Equinor Brasil', 'Cyrela']},
+        {id:6, name:'Rafael Mendes', firm:'Mendes Arquitetos', corpProjectsPct:75, furnitureSpecifier:false, projectsPerYear:6, relationship:'medium', partnerCost:8000, clientCompanies:['Raia Drogasil']},
+        {id:7, name:'Juliana Ferreira', firm:'Ferreira Design Corp', corpProjectsPct:80, furnitureSpecifier:true, projectsPerYear:14, relationship:'strong', partnerCost:15000, clientCompanies:['Stone', 'Totvs']},
+        {id:8, name:'Lucas Almeida', firm:'Almeida Projetos', corpProjectsPct:50, furnitureSpecifier:false, projectsPerYear:5, relationship:'none', partnerCost:5000, clientCompanies:['Light S.A.']}
       ],
       tracker: [
         {month:'Jan 2026', totalLeads:10, hot:0, warm:7, cold:3, approaches:2, meetings:1, proposals:0, closed:0, revenue:0},
@@ -1468,6 +1651,9 @@
       renderTracker();
       renderPipelineBoard();
       renderRecommendations();
+      renderChannels();
+      renderArchitectPartnership();
+      renderSalesTeam();
     }
 
 
@@ -1484,7 +1670,8 @@
               <div class="rec-name">${lead.company}${isNew ? '<span class="rec-badge-new">New</span>' : ''}</div>
               <div class="rec-meta">
                 <span class="badge ${lead.classification.toLowerCase()}">${lead.classification}</span>
-                · ${lead.industry} · ${lead.suggestedAction.replace(/[^\x20-\x7E]/g, '').trim() || lead.suggestedAction}
+                · ${lead.industry} · ${lead.assignedTo}
+                · ${lead.suggestedAction.replace(/[^\x20-\x7E]/g, '').trim() || lead.suggestedAction}
                 ${lead.architectBridge !== '—' ? '<br>Bridge: ' + lead.architectBridge : ''}
               </div>
             </span>
@@ -1629,6 +1816,13 @@
         <tr class="${lead.classification.toLowerCase()}">
           <td>${lead.rank}</td>
           <td><button type="button" class="company-link" onclick="openLeadDetail('${lead.id}')">${lead.company}</button></td>
+          <td>${formatSource(lead.referralSource)}</td>
+          <td>
+            <select class="assign-select" onclick="event.stopPropagation()" onchange="assignLeadTo('${lead.id}', this.value)">
+              <option value="Unassigned" ${lead.assignedTo === 'Unassigned' ? 'selected' : ''}>Unassigned</option>
+              ${SALES_REPS.map(r => `<option value="${r}" ${lead.assignedTo === r ? 'selected' : ''}>${r}</option>`).join('')}
+            </select>
+          </td>
           <td>${lead.industry}</td>
           <td>${lead.location}</td>
           <td>${Math.round(lead.fit)}</td>
@@ -1658,7 +1852,7 @@
           </div>
           <span class="badge-small specifier-${arch.furnitureSpecifier ? 'yes' : 'no'}">${arch.furnitureSpecifier ? '✅ Furniture Specifier' : '❌'}</span>
           <span class="badge-small rel-${arch.relationship}">${arch.relationship}</span>
-          <div>Projects/Year: ${arch.projectsPerYear}</div>
+          <div>Projects/Year: ${arch.projectsPerYear} · Partner cost: R$ ${(arch.partnerCost || 0).toLocaleString()}</div>
           <div class="tags">
             ${arch.clientCompanies.map(c => `<span class="tag clickable" onclick="filterByCompany('${c.replace(/'/g, "\\'")}')">${c}</span>`).join('')}
           </div>
@@ -1765,6 +1959,57 @@
     }
 
 
+
+    function renderChannels() {
+      const tbody = document.getElementById('channels-tbody');
+      if (!tbody) return;
+      const stats = getChannelStats();
+      tbody.innerHTML = stats.map(row => {
+        const conv = row.leads ? Math.round((row.closed / row.leads) * 100) : 0;
+        return `<tr onclick="filterBySource('${row.key}')">
+          <td><strong>${row.label}</strong></td>
+          <td>${row.leads}</td>
+          <td style="color:var(--hot);font-weight:600;">${row.hot}</td>
+          <td>${row.pipeline}</td>
+          <td>${row.closed}</td>
+          <td>${conv}%</td>
+          <td style="color:var(--success);font-weight:600;">R$ ${row.revenue.toLocaleString()}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function renderArchitectPartnership() {
+      const tbody = document.getElementById('architect-partnership-tbody');
+      if (!tbody) return;
+      const stats = getArchitectPartnershipStats();
+      tbody.innerHTML = stats.map(s => `
+        <tr onclick="viewBridgeLeads('${s.arch.name.replace(/'/g, "\\'")}')">
+          <td><strong>${s.arch.name}</strong><br><span style="font-size:0.75rem;color:var(--text-muted);">${s.arch.firm}</span></td>
+          <td>${s.referrals}</td>
+          <td>${s.meetings}</td>
+          <td>${s.closed}</td>
+          <td>${s.conv}%</td>
+          <td style="color:var(--success);font-weight:600;">R$ ${s.revenue.toLocaleString()}</td>
+          <td>R$ ${s.cost.toLocaleString()}</td>
+          <td class="${s.revenue > s.cost ? 'roi-positive' : 'roi-neutral'}">${s.roi}</td>
+        </tr>`).join('');
+    }
+
+    function renderSalesTeam() {
+      const grid = document.getElementById('sales-team-grid');
+      if (!grid) return;
+      grid.innerHTML = SALES_REPS.map(rep => {
+        const mine = currentData.leads.filter(l => l.assignedTo === rep);
+        const hot = mine.filter(l => l.classification === 'Hot').length;
+        const active = mine.filter(l => isInPipeline(l.pipelineStage) && !isClosed(l.pipelineStage)).length;
+        return `<div class="team-card">
+          <strong>${rep}</strong>
+          <span>${mine.length} assigned · ${hot} hot · ${active} active in pipeline</span>
+        </div>`;
+      }).join('');
+    }
+
+
     function navigateToLeads(opts = {}) {
       leadFilters.architectBridge = opts.architectBridge || '';
       switchTab('leads');
@@ -1786,6 +2031,8 @@
       leadFilters.architectBridge = '';
       document.getElementById('search-leads').value = '';
       document.getElementById('filter-leads').value = 'all';
+      document.getElementById('filter-source').value = 'all';
+      leadFilters.source = 'all';
       document.getElementById('leads-filter-banner').style.display = 'none';
       filterLeads();
     }
@@ -1815,7 +2062,15 @@
           <div class="detail-item"><label>Architect bridge</label><span>${lead.architectBridge}</span></div>
           <div class="detail-item"><label>Industry</label><span>${lead.industry}</span></div>
           <div class="detail-item"><label>Location</label><span>${lead.location}</span></div>
-        </div>`;
+          <div class="detail-item"><label>Channel</label><span>${formatSource(lead.referralSource)}</span></div>
+          <div class="detail-item"><label>Assigned to</label><span>${lead.assignedTo}</span></div>
+          ${lead.dealRevenue ? `<div class="detail-item"><label>Deal revenue</label><span>R$ ${lead.dealRevenue.toLocaleString()}</span></div>` : ''}
+        </div>
+        <p style="margin:1rem 0 0;font-size:0.875rem;color:var(--text-muted);">Reassign:</p>
+        <select class="assign-select" style="margin-top:0.35rem;" onchange="assignLeadTo('${lead.id}', this.value)">
+          <option value="Unassigned" ${lead.assignedTo === 'Unassigned' ? 'selected' : ''}>Unassigned</option>
+          ${SALES_REPS.map(r => `<option value="${r}" ${lead.assignedTo === r ? 'selected' : ''}>${r}</option>`).join('')}
+        </select>`;
       const actions = document.getElementById('lead-detail-actions');
       const idx = PIPELINE_STAGES.findIndex(s => s.id === lead.pipelineStage);
       const next = PIPELINE_STAGES[idx + 1];
@@ -1838,7 +2093,13 @@
       if (idx < 0 || idx >= PIPELINE_STAGES.length - 1) return;
       lead.pipelineStage = PIPELINE_STAGES[idx + 1].id;
       lead.status = stageLabel(lead.pipelineStage);
+      if (lead.pipelineStage === 'closed' && !lead.dealRevenue) {
+        lead.dealRevenue = Math.round(80000 + lead.totalScore * 1200);
+      }
       renderPipelineBoard();
+      renderChannels();
+      renderArchitectPartnership();
+
       renderLeads();
       renderTopLeads();
       if (activeLeadId === leadId) openLeadDetail(leadId);
@@ -1856,7 +2117,7 @@
             ${cards.length ? cards.map(l => `
               <button type="button" class="pipeline-card" onclick="openLeadDetail('${l.id}')">
                 <strong>${l.company}</strong>
-                <div class="pipeline-card-meta">${Math.round(l.totalScore)} pts · <span class="badge ${l.classification.toLowerCase()}">${l.classification}</span></div>
+                <div class="pipeline-card-meta">${Math.round(l.totalScore)} pts · ${formatSource(l.referralSource)}<br>${l.assignedTo} · <span class="badge ${l.classification.toLowerCase()}">${l.classification}</span></div>
               </button>`).join('') : '<p style="font-size:0.75rem;color:var(--text-muted);margin:0;">No leads</p>'}
           </div>
         </div>`;
@@ -1877,12 +2138,12 @@
     }
 
     function exportCSV() {
-      const headers = ['Rank','Company','Industry','Location','Fit','Urgency','Value','Relationship','Architect','Total','Classification','Stage','Architect Bridge','Suggested Action'];
+      const headers = ['Rank','Company','Channel','Assigned To','Industry','Location','Fit','Urgency','Value','Relationship','Architect','Total','Classification','Stage','Revenue','Architect Bridge','Suggested Action'];
       const rows = currentData.leads.map(l => [
-        l.rank, l.company, l.industry, l.location,
+        l.rank, l.company, formatSource(l.referralSource), l.assignedTo, l.industry, l.location,
         Math.round(l.fit), Math.round(l.urgency), Math.round(l.value),
         Math.round(l.relationship), Math.round(l.architectChannel),
-        Math.round(l.totalScore), l.classification, stageLabel(l.pipelineStage),
+        Math.round(l.totalScore), l.classification, stageLabel(l.pipelineStage), l.dealRevenue || 0,
         l.architectBridge, String(l.suggestedAction).replace(/,/g, ' ')
       ]);
       const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -1897,7 +2158,7 @@
 
     function applyRouteFromHash() {
       const hash = (location.hash || '#dashboard').replace('#', '').split('?')[0];
-      const valid = ['recommendations', 'dashboard', 'leads', 'pipeline', 'architects', 'tracker'];
+      const valid = ['recommendations', 'dashboard', 'leads', 'pipeline', 'channels', 'architects', 'tracker'];
       switchTab(valid.includes(hash) ? hash : 'recommendations');
     }
 
@@ -1914,8 +2175,9 @@
       }
       if (tabName === 'dashboard') renderPipelineChart();
       else if (tabName === 'leads') filterLeads();
-      else if (tabName === 'pipeline') renderPipelineBoard();
-      else if (tabName === 'architects') renderArchitects();
+      else if (tabName === 'pipeline') { renderPipelineBoard(); renderSalesTeam(); }
+      else if (tabName === 'channels') renderChannels();
+      else if (tabName === 'architects') { renderArchitectPartnership(); renderArchitects(); }
       else if (tabName === 'tracker') renderTracker();
       else if (tabName === 'recommendations') renderRecommendations();
     }
@@ -1956,7 +2218,8 @@
         const matchesSearch = !search || lead.company.toLowerCase().includes(search) || lead.id.toLowerCase().includes(search);
         const matchesFilter = filter === 'all' || lead.classification.toLowerCase() === filter;
         const matchesArch = !leadFilters.architectBridge || lead.architectBridge === leadFilters.architectBridge;
-        return matchesSearch && matchesFilter && matchesArch;
+        const matchesSource = leadFilters.source === 'all' || !leadFilters.source || lead.referralSource === leadFilters.source;
+        return matchesSearch && matchesFilter && matchesArch && matchesSource;
       });
 
       renderLeads();
